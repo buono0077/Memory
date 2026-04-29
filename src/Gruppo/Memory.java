@@ -29,7 +29,7 @@ public class Memory {
 
     // Componenti UI principali
     static JFrame frame;
-    static JPanel mainPanel;       // CardLayout root
+    static JPanel mainPanel;
     static CardLayout cardLayout;
 
     // Pannelli score (angoli)
@@ -68,9 +68,10 @@ public class Memory {
     
     // ════════════════════════════════ SCHERMATA SELEZIONE GIOCATORI ════════════════════════════════════════
     static JPanel creaSchermataSelezione() {
-        JPanel panel = new JPanel(new GridBagLayout());
+        JPanel panel = new JPanel(new BorderLayout());
         panel.setBackground(new Color(15, 25, 50));
 
+        // Pannello centrale con contenuto
         JPanel contenuto = new JPanel();
         contenuto.setLayout(new BoxLayout(contenuto, BoxLayout.Y_AXIS));
         contenuto.setOpaque(false);
@@ -139,7 +140,31 @@ public class Memory {
         }
 
         contenuto.add(rettangoli);
-        panel.add(contenuto);
+
+        // Pannello wrapper per centrare il contenuto
+        JPanel centerWrapper = new JPanel(new GridBagLayout());
+        centerWrapper.setOpaque(false);
+        centerWrapper.add(contenuto);
+
+        panel.add(centerWrapper, BorderLayout.CENTER);
+
+        // Bottone Esci in basso a destra
+        JPanel bottomPanel = new JPanel(new BorderLayout());
+        bottomPanel.setOpaque(false);
+        bottomPanel.setBorder(new EmptyBorder(0, 0, 20, 20));
+
+        JButton bottonEsci = new JButton("Esci");
+        bottonEsci.setFont(new Font("Arial", Font.BOLD, 16));
+        bottonEsci.setBackground(new Color(231, 76, 60));
+        bottonEsci.setForeground(Color.WHITE);
+        bottonEsci.setFocusPainted(false);
+        bottonEsci.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+        bottonEsci.setPreferredSize(new Dimension(120, 40));
+        bottonEsci.addActionListener(e -> System.exit(0));
+
+        bottomPanel.add(bottonEsci, BorderLayout.EAST);
+        panel.add(bottomPanel, BorderLayout.SOUTH);
+
         return panel;
     }
 
@@ -154,7 +179,7 @@ public class Memory {
         JPanel gamePanel = creaSchermataDiGioco();
         mainPanel.add(gamePanel, "gioco");
         cardLayout.show(mainPanel, "gioco");
-        aggiornaColoresFondo();
+        aggiornaColoreSfondo();
     }
 
     // ════════════════════════════════════════════════════════════════════════
@@ -164,7 +189,11 @@ public class Memory {
         JPanel root = new JPanel(new BorderLayout());
         root.setBackground(SFONDO_DEFAULT);
 
-        // Score panel (nord)
+        // Top panel con Score e bottone Indietro
+        JPanel topPanel = new JPanel(new BorderLayout());
+        topPanel.setOpaque(false);
+
+        // Score panel (nord-sinistra/centro)
         scorePanel = new JPanel(new GridLayout(1, numeroGiocatori));
         scorePanel.setOpaque(false);
 
@@ -180,10 +209,29 @@ public class Memory {
             scorePanel.add(lbl);
         }
 
+        // Bottone Indietro (nord-destra)
+        JButton bottonIndietro = new JButton("← Indietro");
+        bottonIndietro.setFont(new Font("Arial", Font.BOLD, 14));
+        bottonIndietro.setBackground(new Color(155, 89, 182));
+        bottonIndietro.setForeground(Color.WHITE);
+        bottonIndietro.setFocusPainted(false);
+        bottonIndietro.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+        bottonIndietro.setPreferredSize(new Dimension(130, 40));
+        bottonIndietro.setBorder(new EmptyBorder(5, 15, 5, 15));
+        bottonIndietro.addActionListener(e -> tornaAllaScelta());
+
+        JPanel topRight = new JPanel(new FlowLayout(FlowLayout.RIGHT));
+        topRight.setOpaque(false);
+        topRight.setBorder(new EmptyBorder(10, 10, 10, 20));
+        topRight.add(bottonIndietro);
+
         // Mostra score panel solo se ci sono più giocatori
         if (numeroGiocatori > 1) {
-            root.add(scorePanel, BorderLayout.NORTH);
+            topPanel.add(scorePanel, BorderLayout.CENTER);
         }
+        topPanel.add(topRight, BorderLayout.EAST);
+
+        root.add(topPanel, BorderLayout.NORTH);
 
         // Griglia carte (centro)
         JPanel gridPanel = new JPanel(new GridBagLayout());
@@ -281,7 +329,7 @@ public class Memory {
             // Passa al prossimo giocatore
             if (numeroGiocatori > 1) {
                 giocatoreCorrente = (giocatoreCorrente + 1) % numeroGiocatori;
-                aggiornaColoresFondo();
+                aggiornaColoreSfondo();
                 aggiornaTurnoLabel(null);
             }
         }
@@ -301,7 +349,7 @@ public class Memory {
         return new Color(r, g, b);
     }
     
-    static void aggiornaColoresFondo() {
+    static void aggiornaColoreSfondo() {
         if (numeroGiocatori <= 1) return;
 
         Color base = COLORI_GIOCATORI[giocatoreCorrente];
@@ -377,20 +425,32 @@ public class Memory {
             "Fine partita!", JOptionPane.YES_NO_OPTION);
 
         if (risposta == JOptionPane.YES_OPTION) {
-            // Torna alla selezione
+            // Rigioca con lo stesso numero di giocatori
             mainPanel.remove(mainPanel.getComponent(mainPanel.getComponentCount() - 1));
-            cardLayout.show(mainPanel, "selezione");
+            avviaGioco();
         } else {
-            System.exit(0);
+            // Torna alla selezione (non esce più direttamente)
+            tornaAllaScelta();
         }
     }
 
     // ════════════════════════════════════════════════════════════════════════
 
     // ═════════════════════════════════ UTILITY ═══════════════════════════════════════
+    static void tornaAllaScelta() {
+        // Rimuove il pannello di gioco e torna alla selezione
+        mainPanel.remove(mainPanel.getComponent(mainPanel.getComponentCount() - 1));
+        cardLayout.show(mainPanel, "selezione");
+        
+        // Reset variabili di gioco
+        prima = null;
+        seconda = null;
+        blocco = false;
+    }
+
     static ImageIcon caricaImmagine(String path, int maxW, int maxH) {
-        ImageIcon icon   = new ImageIcon(Memory.class.getResource(path));
-        Image    scaled  = icon.getImage().getScaledInstance(maxW, maxH, Image.SCALE_SMOOTH);
+        ImageIcon icon = new ImageIcon(Memory.class.getResource(path));
+        Image scaled = icon.getImage().getScaledInstance(maxW, maxH, Image.SCALE_SMOOTH);
         return new ImageIcon(scaled);
     }
 }
